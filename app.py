@@ -26,24 +26,34 @@ elif "Cấp 2" in level:
 else:
   current_max = 1000
 
-# 2. Khởi tạo trạng thái an toàn
+# 2. Khởi tạo toàn bộ session_state an toàn ngay từ đầu để tránh mọi lỗi KeyError
 if "max_val" not in st.session_state or st.session_state.max_val != current_max:
   st.session_state.max_val = current_max
-  st.session_state.secret_setter = (
-      "Người chơi 1"  # Người ra đề (chọn số bí mật)
-  )
-  st.session_state.secret_guesser = (
-      "Người chơi 2"  # Người đoán số
-  )
-  st.session_state.step = (
-      "setting"  # Giai đoạn: 'setting' (chọn số) hoặc 'guessing' (đoán số)
-  )
+  st.session_state.secret_setter = "Người chơi 1"
+  st.session_state.secret_guesser = "Người chơi 2"
+  st.session_state.step = "setting"
   st.session_state.target_number = None
   st.session_state.attempts = 0
   st.session_state.game_over = False
   st.session_state.min_limit = 1
   st.session_state.max_limit = current_max
   st.session_state.message = ""
+
+# Đảm bảo các biến phụ luôn tồn tại
+if "step" not in st.session_state:
+  st.session_state.step = "setting"
+if "secret_setter" not in st.session_state:
+  st.session_state.secret_setter = "Người chơi 1"
+if "secret_guesser" not in st.session_state:
+  st.session_state.secret_guesser = "Người chơi 2"
+if "attempts" not in st.session_state:
+  st.session_state.attempts = 0
+if "game_over" not in st.session_state:
+  st.session_state.game_over = False
+if "min_limit" not in st.session_state:
+  st.session_state.min_limit = 1
+if "max_limit" not in st.session_state:
+  st.session_state.max_limit = current_max
 
 max_val = st.session_state.max_val
 
@@ -149,44 +159,4 @@ elif st.session_state.step == "guessing":
             )
             if num <= st.session_state.max_limit:
               st.session_state.max_limit = num - 1
-          st.rerun()
-
-  # Nếu đã đoán trúng, hiển thị nút đổi vai để chơi ngược lại
-  if st.session_state.game_over:
-    st.balloons()
-    if st.button(
-        "🔄 Đổi vai trò (Người đoán thành người ra đề)",
-        use_container_width=True,
-    ):
-      # Đổi vai cho nhau
-      (
-          st.session_state.secret_setter,
-          st.session_state.secret_guesser,
-      ) = (
-          st.session_state.secret_guesser,
-          st.session_state.secret_setter,
-      )
-      st.session_state.step = "setting"
-      st.session_state.target_number = None
-      st.session_state.attempts = 0
-      st.session_state.game_over = False
-      st.session_state.min_limit = 1
-      st.session_state.max_limit = max_val
-      st.session_state.message = ""
-      st.rerun()
-
-# Sidebar hướng dẫn
-with st.sidebar:
-  st.markdown("### 💡 Hướng dẫn chơi Ra Đề & Đoán")
-  st.markdown(
-      "- **Bước 1**: Người ra đề chọn một số bí mật (người kia phải nhắm mắt"
-      " lại)."
-  )
-  st.markdown(
-      "- **Bước 2**: Người đoán mở mắt và bấm các ô số trên bảng. Số sai sẽ"
-      " tự động mờ đi."
-  )
-  st.markdown(
-      "- **Bước 3**: Khi đoán trúng, hai bạn có thể bấm **Đổi vai** để thi xem"
-      " ai đoán nhanh hơn!"
-  )
+          st
