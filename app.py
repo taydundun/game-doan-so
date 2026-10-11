@@ -29,8 +29,7 @@ if submit_button and not st.session_state.game_over:
 
     if user_guess == st.session_state.target_number:
         st.success(
-            f"🎉 Chính xác! Bạn đã đoán đúng số {st.session_state.target_number} "
-            f"sau {st.session_state.attempts} lần thử!"
+            f"🎉 Chính xác! Bạn đã đoán đúng số {st.session_state.target_number} sau {st.session_state.attempts} lần thử!"
         )
         st.session_state.game_over = True
     elif user_guess < st.session_state.target_number:
@@ -46,8 +45,9 @@ if st.session_state.game_over:
         st.session_state.game_over = False
         st.rerun()
 
-# Sidebar hướng dẫn (Đã sửa lỗi Markdown)
+# Sidebar hướng dẫn
 with st.sidebar:
     st.markdown("### 💡 Hướng dẫn chơi")
     st.markdown("- **Mục tiêu**: Tìm ra con số bí mật từ 1 đến 100 trong ít lần thử nhất.")
-    st.markdown("- **Gợi ý**: Hệ thống
+    st.markdown("- **Gợi ý**: Hệ thống sẽ báo số bạn đoán đang lớn hơn hay nhỏ hơn số bí mật.")
+    st.markdown("- **Nút chơi lại**: Nhấn Chơi ván mới để bắt đầu lượt chơi khác.")
