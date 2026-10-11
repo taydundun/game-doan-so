@@ -9,53 +9,39 @@ st.set_page_config(
 st.title("🎮 Game Đoán Số Tương Tác")
 st.write(
     "Chọn cấp độ và bấm trực tiếp vào các ô số bên dưới để đoán. Các số không"
-    " hợp lệ sẽ tự động bị mờ đi!"
+    " hợp lệ sẽ tự động bị khóa lại!"
 )
 
-# 1. Khởi tạo toàn bộ session_state an toàn để tránh lỗi KeyError
-if "max_val" not in st.session_state:
-  st.session_state.max_val = 100
-if "target_number" not in st.session_state:
-  st.session_state.target_number = random.randint(1, 100)
-if "attempts" not in st.session_state:
-  st.session_state.attempts = 0
-if "game_over" not in st.session_state:
-  st.session_state.game_over = False
-if "min_limit" not in st.session_state:
-  st.session_state.min_limit = 1
-if "max_limit" not in st.session_state:
-  st.session_state.max_limit = 100
-if "message" not in st.session_state:
-  st.session_state.message = (
-      "🎮 Trò chơi bắt đầu! Hãy chọn một số trên bảng dưới đây."
-  )
-
-# 2. Chọn cấp độ game
+# 1. Chọn cấp độ game (Đặt lên đầu để nhận diện cấp độ trước khi khởi tạo)
 level = st.selectbox(
     "🏆 Chọn cấp độ:",
     ["Cấp 1: 1 - 100", "Cấp 2: 1 - 500", "Cấp 3: 1 - 1000"],
     index=0,
 )
 
+# Xác định max_val theo cấp độ được chọn
 if "1" in level:
-  new_max_val = 100
+  target_max = 100
 elif "2" in level:
-  new_max_val = 500
+  target_max = 500
 else:
-  new_max_val = 1000
+  target_max = 1000
 
-# Nếu thay đổi cấp độ, tiến hành reset game theo mức mới
-if st.session_state.max_val != new_max_val:
-  st.session_state.max_val = new_max_val
-  st.session_state.target_number = random.randint(1, new_max_val)
+# 2. Khởi tạo hoặc Reset game nếu đổi cấp độ hoặc bấm nút chơi lại
+if (
+    "max_val" not in st.session_state
+    or st.session_state.max_val != target_max
+    or "target_number" not in st.session_state
+):
+  st.session_state.max_val = target_max
+  st.session_state.target_number = random.randint(1, target_max)
   st.session_state.attempts = 0
   st.session_state.game_over = False
   st.session_state.min_limit = 1
-  st.session_state.max_limit = new_max_val
+  st.session_state.max_limit = target_max
   st.session_state.message = (
-      f"🏆 Đã chuyển cấp độ! Hãy đoán số từ 1 đến {new_max_val}."
+      f"🎮 Bắt đầu ván mới với khoảng từ 1 đến {target_max}!"
   )
-  st.rerun()
 
 max_val = st.session_state.max_val
 
@@ -101,7 +87,7 @@ for i in range(0, len(numbers), cols_per_row):
 
       if st.button(
           str(num),
-          key=f"btn_{num}",
+          key=f"btn_{num}_{max_val}",
           disabled=is_disabled,
           use_container_width=True,
       ):
@@ -132,9 +118,12 @@ for i in range(0, len(numbers), cols_per_row):
 # Sidebar hướng dẫn
 with st.sidebar:
   st.markdown("### 💡 Hướng dẫn chơi")
-  st.markdown("- **Cấp độ**: Thay đổi độ khó tùy ý ở menu trên.")
   st.markdown(
-      "- **Bảng bấm**: Bấm trực tiếp vào số để đoán. Số sai sẽ tự động mờ đi"
-      " và khóa lại."
+      "- **Cấp độ**: Thay đổi độ khó tùy ý (Cấp 1: 1-100, Cấp 2: 1-500, Cấp"
+      " 3: 1-1000)."
+  )
+  st.markdown(
+      "- **Bảng bấm**: Bấm trực tiếp vào số để đoán. Số sai sẽ tự động mờ đi và"
+      " khóa lại."
   )
   st.markdown("- **Mục tiêu**: Tìm ra con số bí mật với ít lần thử nhất.")
