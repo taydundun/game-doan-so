@@ -8,54 +8,74 @@ st.set_page_config(
 )
 
 
-# Hàm phát âm thanh chuẩn không bị chặn
+# Hàm phát âm thanh kết hợp tương tác người dùng
 def play_sound(sound_type):
   js_code = f"""
     <script>
-    try {{
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') {{
-            audioCtx.resume();
-        }}
-        
-        function playTone(freq, type, duration, delay = 0) {{
-            setTimeout(() => {{
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            }}, delay);
-        }}
+    (function() {{
+        try {{
+            // Sử dụng chung AudioContext được kích hoạt từ trang
+            if (!window.sharedAudioCtx) {{
+                window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }}
+            const ctx = window.sharedAudioCtx;
+            if (ctx.state === 'suspended') {{
+                ctx.resume();
+            }}
+            
+            function playTone(freq, type, duration, delay = 0) {{
+                setTimeout(() => {{
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + duration);
+                }}, delay);
+            }}
 
-        let type = "{sound_type}";
-        if (type === "click") {{
-            playTone(600, 'sine', 0.1);
-        }} else if (type === "wrong") {{
-            playTone(150, 'sawtooth', 0.15, 0);
-            playTone(100, 'sawtooth', 0.25, 100);
-        }} else if (type === "win") {{
-            playTone(523.25, 'triangle', 0.15, 0);
-            playTone(659.25, 'triangle', 0.15, 150);
-            playTone(783.99, 'triangle', 0.15, 300);
-            playTone(1046.50, 'triangle', 0.4, 450);
-        }}
-    }} catch(e) {{}}
+            let type = "{sound_type}";
+            if (type === "click") {{
+                playTone(660, 'sine', 0.1);
+            }} else if (type === "wrong") {{
+                playTone(150, 'sawtooth', 0.15, 0);
+                playTone(100, 'sawtooth', 0.25, 100);
+            }} else if (type === "win") {{
+                playTone(523.25, 'triangle', 0.15, 0);
+                playTone(659.25, 'triangle', 0.15, 150);
+                playTone(783.99, 'triangle', 0.15, 300);
+                playTone(1046.50, 'triangle', 0.4, 450);
+            }}
+        }} catch(e) {{}}
+    }})();
     </script>
     """
-  components.html(js_code, height=1, width=1)
+  components.html(js_code, height=0, width=0)
 
 
 st.title("👨‍🏫 Game Đoán Số (Thầy Chọn - Lớp Đoán)")
-st.write(
-    "Hãy chọn số bí mật, sau đó mọi người sẽ cùng nhau đoán trên bảng tương"
-    " tác!"
-)
+st.write("Hãy chọn số bí mật và cùng lớp tham gia đoán số với âm thanh sinh động!")
+
+# NÚT KÍCH HOẠT ÂM THANH TRƯỚC KHI CHƠI (Bắt buộc để vượt qua chặn của trình duyệt)
+if "audio_enabled" not in st.session_state:
+  st.session_state.audio_enabled = False
+
+if not st.session_state.audio_enabled:
+  if st.button(
+      "🔊 BẤM VÀO ĐÂY ĐỂ BẬT ÂM THANH TRƯỚC KHI CHƠI", use_container_width=True
+  ):
+    st.session_state.audio_enabled = True
+    play_sound("click")
+    st.rerun()
+  st.info(
+      "💡 Mẹo: Bạn cần bấm vào nút trên 1 lần để trình duyệt cho phép phát âm"
+      " thanh trong suốt trò chơi."
+  )
+  st.stop()
 
 # 1. Chọn cấp độ game
 level = st.selectbox(
