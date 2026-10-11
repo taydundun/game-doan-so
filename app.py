@@ -3,12 +3,13 @@ import streamlit as st
 
 # Cấu hình trang
 st.set_page_config(
-    page_title="Game Đoán Số Nâng Cao", page_icon="🎮", layout="centered"
+    page_title="Game Đoán Số Tương Tác", page_icon="🎮", layout="centered"
 )
 
-st.title("🎮 Game Đoán Số Nâng Cao")
+st.title("🎮 Game Đoán Số Tương Tác")
 st.write(
-    "Thử thách trí tuệ với các cấp độ khó khác nhau và bảng loại trừ thông minh!"
+    "Chọn cấp độ và bấm trực tiếp vào các ô số bên dưới để đoán. Các số không"
+    " hợp lệ sẽ tự động bị mờ đi!"
 )
 
 # 1. Chọn cấp độ game
@@ -37,62 +38,35 @@ if (
   st.session_state.game_over = False
   st.session_state.min_limit = 1
   st.session_state.max_limit = max_val
-
-# Nút đổi ván mới hoặc reset
-col1, col2 = st.columns([1, 4])
-with col1:
-  if st.button("🔄 Chơi lại"):
-    st.session_state.target_number = random.randint(1, max_val)
-    st.session_state.attempts = 0
-    st.session_state.game_over = False
-    st.session_state.min_limit = 1
-    st.session_state.max_limit = max_val
-    st.rerun()
-
-# Form nhập số dự đoán
-with st.form("guess_form"):
-  user_guess = st.number_input(
-      f"Nhập dự đoán của bạn (1 - {max_val}):",
-      min_value=1,
-      max_value=max_val,
-      step=1,
+  st.session_state.message = (
+      "🎮 Trò chơi bắt đầu! Hãy chọn một số trên bảng dưới đây."
   )
-  submit_button = st.form_submit_button("Đoán ngay!")
 
-# Xử lý khi nhấn nút Đoán
-if submit_button and not st.session_state.game_over:
-  st.session_state.attempts += 1
+# Nút chơi lại
+if st.button("🔄 Chơi ván mới / Reset"):
+  st.session_state.target_number = random.randint(1, max_val)
+  st.session_state.attempts = 0
+  st.session_state.game_over = False
+  st.session_state.min_limit = 1
+  st.session_state.max_limit = max_val
+  st.session_state.message = "🔄 Đã reset ván mới. Chúc bạn may mắn!"
+  st.rerun()
 
-  if user_guess == st.session_state.target_number:
-    st.success(
-        f"🎉 Chính xác! Bạn đã đoán đúng số {st.session_state.target_number}"
-        f" sau {st.session_state.attempts} lần thử!"
-    )
-    st.session_state.game_over = True
-  elif user_guess < st.session_state.target_number:
-    st.warning(
-        f"📈 Số bạn đoán **nhỏ hơn** số bí mật. (Khoảng hợp lệ hiện tại:"
-        f" từ {user_guess + 1} đến {st.session_state.max_limit})"
-    )
-    if user_guess >= st.session_state.min_limit:
-      st.session_state.min_limit = user_guess + 1
-  else:
-    st.warning(
-        f"📉 Số bạn đoán **lớn hơn** số bí mật. (Khoảng hợp lệ hiện tại:"
-        f" từ {st.session_state.min_limit} đến {user_guess - 1})"
-    )
-    if user_guess <= st.session_state.max_limit:
-      st.session_state.max_limit = user_guess - 1
-
-# 2. Hiển thị Bảng Trạng Thái (Các số bị loại sẽ bị mờ/gạch đi)
+# Hiển thị thông báo trạng thái lượt chơi gần nhất
 st.markdown("---")
-st.subheader("📊 Bảng Trạng Thái Các Số (1 đến " + str(max_val) + ")")
-st.write(
-    "💡 *Các số nằm ngoài khoảng hợp lệ hoặc đã bị loại trừ sẽ tự động bị mờ"
-    " đi!*"
+if st.session_state.game_over:
+  st.success(st.session_state.message)
+else:
+  st.info(
+      f"🎯 Số lần thử: {st.session_state.attempts} | {st.session_state.message}"
+  )
+
+# 2. Bảng chọn số tương tác (Bấm trực tiếp để đoán)
+st.subheader(
+    f"📊 Bảng Chọn Số (Khoảng hợp lệ: {st.session_state.min_limit} đến"
+    f" {st.session_state.max_limit})"
 )
 
-# Tạo bảng lưới hiển thị các số
 cols_per_row = 10
 numbers = list(range(1, max_val + 1))
 
@@ -101,27 +75,48 @@ for i in range(0, len(numbers), cols_per_row):
   cols = st.columns(cols_per_row)
   for idx, num in enumerate(row_nums):
     with cols[idx]:
-      if (
+      # Kiểm tra xem số có nằm ngoài khoảng hợp lệ không hoặc game đã kết thúc
+      is_disabled = (
           num < st.session_state.min_limit
           or num > st.session_state.max_limit
+          or st.session_state.game_over
+      )
+
+      # Nút bấm đại diện cho mỗi con số
+      if st.button(
+          str(num), key=f"btn_{num}", disabled=is_disabled, use_container_width=True
       ):
-        st.markdown(
-            f"<p style='color: gray; text-decoration: line-through;"
-            f" text-align: center; margin: 0;'>{num}</p>",
-            unsafe_allow_html=True,
-        )
-      else:
-        st.markdown(
-            f"<p style='color: green; font-weight: bold; text-align:"
-            f" center; margin: 0;'>{num}</p>",
-            unsafe_allow_html=True,
-        )
+        st.session_state.attempts += 1
+
+        if num == st.session_state.target_number:
+          st.session_state.game_over = True
+          st.session_state.message = (
+              f"🎉 Chính xác! Bạn đã đoán đúng số {num} sau"
+              f" {st.session_state.attempts} lần thử!"
+          )
+        elif num < st.session_state.target_number:
+          st.session_state.message = (
+              f"📈 Số {num} nhỏ hơn số bí mật! Các số từ"
+              f" {st.session_state.min_limit} đến {num} đã bị loại."
+          )
+          if num >= st.session_state.min_limit:
+            st.session_state.min_limit = num + 1
+        else:
+          st.session_state.message = (
+              f"📉 Số {num} lớn hơn số bí mật! Các số từ {num} đến"
+              f" {st.session_state.max_limit} đã bị loại."
+          )
+          if num <= st.session_state.max_limit:
+            st.session_state.max_limit = num - 1
+        st.rerun()
 
 # Sidebar hướng dẫn
 with st.sidebar:
   st.markdown("### 💡 Hướng dẫn chơi")
+  st.markdown("- **Cấp độ**: Thay đổi độ khó (1-100, 1-500, hoặc 1-1000).")
   st.markdown(
-      "- **Cấp độ**: Thay đổi độ khó tùy ý (1-100, 1-500, hoặc 1-1000)."
+      "- **Bảng bấm**: Bấm trực tiếp vào ô số để đoán. Số sai sẽ tự động mờ đi"
+      " và không bấm được nữa."
   )
-  st.markdown("- **Bảng loại trừ**: Các số không phù hợp sẽ tự động mờ đi.")
-  st.markdown("- **Mục tiêu**: Đoán trúng số bí mật với ít lần thử nhất.")
+  st.markdown("- **Mục tiêu**: Tìm ra con số bí mật với ít lần thử nhất.")
+    
