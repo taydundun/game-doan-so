@@ -8,7 +8,7 @@ st.set_page_config(
 )
 
 
-# Hàm phát âm thanh hiệu ứng (Click, Sai, Chiến thắng - chỉ phát 1 lần)
+# Hàm phát âm thanh hiệu ứng
 def play_sound(sound_type):
   js_code = f"""
     <script>
@@ -129,4 +129,54 @@ elif st.session_state.step == "guessing":
   st.info(f"🎯 Số lần đã đoán: {st.session_state.attempts}")
 
   st.subheader(
-      f"📊 Bảng Chọn Số (Khoảng hợp lệ: {st.session_state
+      f"📊 Bảng Chọn Số (Khoảng hợp lệ: {st.session_state.min_limit} đến"
+      f" {st.session_state.max_limit})"
+  )
+
+  cols_per_row = 10
+  numbers = list(range(1, max_val + 1))
+
+  for i in range(0, len(numbers), cols_per_row):
+    row_nums = numbers[i : i + cols_per_row]
+    cols = st.columns(cols_per_row)
+    for idx, num in enumerate(row_nums):
+      with cols[idx]:
+        is_disabled = (
+            num < st.session_state.min_limit
+            or num > st.session_state.max_limit
+            or st.session_state.game_over
+        )
+
+        if st.button(
+            str(num),
+            key=f"guess_btn_{max_val}_{num}",
+            disabled=is_disabled,
+            use_container_width=True,
+        ):
+          st.session_state.attempts += 1
+
+          if num == st.session_state.target_number:
+            st.session_state.game_over = True
+            if not st.session_state.played_win_sound:
+              play_sound("win")
+              st.session_state.played_win_sound = True
+            st.success(
+                f"🎉 CHÍNH XÁC! Đã tìm ra số bí mật **{num}** sau"
+                f" {st.session_state.attempts} lần thử! 🏆"
+            )
+          else:
+            play_sound("wrong")
+            if num < st.session_state.target_number:
+              st.session_state.min_limit = num + 1
+            else:
+              st.session_state.max_limit = num - 1
+          st.rerun()
+
+  if st.session_state.game_over:
+    st.balloons()
+    if st.button("🔄 Hãy chọn số mới cho ván tiếp theo", use_container_width=True):
+      st.session_state.step = "setting"
+      st.session_state.game_over = False
+      st.session_state.played_win_sound = False
+      play_sound("click")
+      st.rerun()
