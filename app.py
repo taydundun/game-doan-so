@@ -8,32 +8,46 @@ st.set_page_config(
 )
 
 
-# Hàm phát âm thanh tự động (click và nhạc chiến thắng)
+# Hàm tổng hợp âm thanh và nhạc nền chạy bằng Web Audio API & HTML5 Audio
 def play_sound(sound_type):
   js_code = f"""
     <script>
     try {{
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playTone(freq, type, duration) {{
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
+        
+        function playTone(freq, type, duration, delay = 0) {{
+            setTimeout(() => {{
+                if (audioCtx.state === 'suspended') {{
+                    audioCtx.resume();
+                }}
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            }}, delay);
         }}
 
         if ("{sound_type}" == "click") {{
-            playTone(440, 'sine', 0.1);
+            // Tiếng bấm chọn số (Ting thanh thoát)
+            playTone(587.33, 'sine', 0.1, 0); // D5
+        }} else if ("{sound_type}" == "wrong") {{
+            // Tiếng đoán sai (Buzzer trầm)
+            playTone(150, 'sawtooth', 0.2, 0);
+            playTone(110, 'sawtooth', 0.3, 100);
         }} else if ("{sound_type}" == "win") {{
-            setTimeout(() => playTone(523.25, 'triangle', 0.2), 0);
-            setTimeout(() => playTone(659.25, 'triangle', 0.2), 200);
-            setTimeout(() => playTone(783.99, 'triangle', 0.2), 400);
-            setTimeout(() => playTone(1046.50, 'triangle', 0.4), 600);
+            // Nhạc chiến thắng hào hùng
+            let notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+            let times = [0, 150, 300, 450, 700, 900];
+            let durations = [0.15, 0.15, 0.15, 0.3, 0.15, 0.5];
+            for(let i=0; i<notes.length; i++) {{
+                playTone(notes[i], 'triangle', durations[i], times[i]);
+            }}
         }}
     }} catch(e) {{}}
     </script>
@@ -41,11 +55,46 @@ def play_sound(sound_type):
   components.html(js_code, height=0, width=0)
 
 
-st.title("👨‍🏫 Game Đoán Số (Thầy Chọn - Lớp Đoán có Âm Thanh)")
-st.write(
-    "Hãy chọn số bí mật, sau đó mọi người sẽ cùng nhau đoán trên bảng tương"
-    " tác với âm thanh sinh động!"
-)
+# Nhạc nền lofi/vui nhộn chạy vòng lặp ngầm
+def play_background_music():
+  bg_js = """
+    <script>
+    if (!window.bgMusicStarted) {
+        window.bgMusicStarted = true;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Tạo giai điệu nhạc nền game nhẹ nhàng lặp lại tự động
+        const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C E G C5 G E
+        let index = 0;
+        
+        setInterval(() => {
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = melody[index];
+            
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime); // Âm lượng nhỏ êm dịu làm nền
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+            
+            index = (index + 1) % melody.length;
+        }, 500); // Nhịp điệu mỗi nốt cách nhau 0.5 giây
+    }
+    </script>
+    """
+  components.html(bg_js, height=0, width=0)
+
+
+# Kích hoạt nhạc nền
+play_background_music()
+
+st.title("👨‍🏫 Game Đoán Số (Thầy Chọn - Lớp Đoán có Nhạc & Âm Thanh)")
+st.write("Cùng tham gia game show đoán số với hiệu ứng âm thanh cực cuốn hút!")
 
 # 1. Chọn cấp độ game
 level = st.selectbox(
@@ -150,7 +199,6 @@ elif st.session_state.step == "guessing":
             use_container_width=True,
         ):
           st.session_state.attempts += 1
-          play_sound("click")
 
           if num == st.session_state.target_number:
             st.session_state.game_over = True
@@ -159,8 +207,19 @@ elif st.session_state.step == "guessing":
                 f"🎉 CHÍNH XÁC! Đã tìm ra số bí mật **{num}** sau"
                 f" {st.session_state.attempts} lần thử! 🏆"
             )
-          elif num < st.session_state.target_number:
-            st.session_state.min_limit = num + 1
           else:
-            st.session_state.max_limit = num - 1
+            play_sound("wrong")  # Âm thanh khi học sinh chọn sai
+            if num < st.session_state.target_number:
+              st.session_state.min_limit = num + 1
+            else:
+              st.session_state.max_limit = num - 1
           st.rerun()
+
+  if st.session_state.game_over:
+    st.balloons()
+    if st.button("🔄 Hãy chọn số mới cho ván tiếp theo", use_container_width=True):
+      st.session_state.step = "setting"
+      st.session_state.game_over = False
+      st.session_state.trigger_win_sound = False
+      play_sound("click")
+      st.rerun()
